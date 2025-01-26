@@ -41,26 +41,6 @@ def url_exists(url: str) -> bool:
         return False
 
 
-# url = "https://www.nature.com/cgt/"
-# url = "https://www.mdpi.com/journal/genes"
-# url = "https://www.science.org/journal/stm"
-# url = "https://www.cell.com/cell-systems/home"
-# url = "https://www.sciencedirect.com/journal/cell-reports"
-# model_id = "meta-llama/Llama-3.3-70B-Instruct"
-#
-# model = HfApiModel(model_id=model_id, token="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")
-# agent = CodeAgent(tools=[], model=model, add_base_tools=True)
-#
-# agent.run(
-#     "Could you give me the 118th number in the Fibonacci sequence?",
-# )
-
-# model = LiteLLMModel(model_id="ollama_chat/llama3.2", api_key="ollama")
-# m = "describeai/gemini-small"
-# m = "meta-llama/Llama-3.3-70B-Instruct"
-# m = "microsoft/phi-4"
-
-
 def get_rss(url: str, model: str):
     model = HfApiModel(model_id=model)
     agent = CodeAgent(
@@ -71,10 +51,6 @@ def get_rss(url: str, model: str):
     o = agent.run(
         f"Get the url of the rss feed for the journal hosted at '{url}'. Only give me the rss url. Use download_website to get the html of the journal hosted at '{url}'. Use url_exists to test the rss url before giving it to me. If you get stuck, try looking at all urls provided in the journal html, and check to see if they mention rss. Some rss urls are presented relative to the base domain, so try adding the journal domain prefix when an rss url does not contain http or https. There is no need to visit the rss url. Do not give me a rss url that does not pass the url_exists check."
     )
-    # You might need to look in data-react-helmet elements.
-    # print("debug", o)
-    # print(dir(o))
-    # print(o.content)
     try:
         res = o.content
     except:
