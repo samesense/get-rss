@@ -69,13 +69,17 @@ def get_rss(url: str, model: str):
         additional_authorized_imports=["bs4", "requests", "playwright", "urllib"],
     )
     o = agent.run(
-        f"Get the url of the rss url for the journal hosted at '{url}'. Only give me the rss url. Use download_website to get the html of the journal website. Use url_exists to test the rss url before giving it to me. Try looking at all urls provided in the html, and check to see if they mention rss."
+        f"Get the url of the rss feed for the journal hosted at '{url}'. Only give me the rss url. Use download_website to get the html of the journal hosted at '{url}'. Use url_exists to test the rss url before giving it to me. If you get stuck, try looking at all urls provided in the journal html, and check to see if they mention rss. Some rss urls are presented relative to the base domain, so try adding the journal domain prefix when an rss url does not contain http or https. There is no need to visit the rss url."
     )
     # You might need to look in data-react-helmet elements.
     # print("debug", o)
     # print(dir(o))
     # print(o.content)
-    return o.content
+    try:
+        res = o.content
+    except:
+        res = o
+    return res
 
 
 @click.command()
@@ -88,7 +92,7 @@ def get_rss(url: str, model: str):
 )
 def main(url: str, model: str):
     rss_url = get_rss(url, model)
-    print(rss_url)
+    print(f"rss-url: {rss_url}")
 
 
 if __name__ == "__main__":
