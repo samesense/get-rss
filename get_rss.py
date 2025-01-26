@@ -1,72 +1,95 @@
-import re
-
+import click
 import requests
-from huggingface_hub import login
-from markdownify import markdownify
-from requests.exceptions import RequestException
-from smolagents import (
-    CodeAgent,
-    DuckDuckGoSearchTool,
-    HfApiModel,
-    LiteLLMModel,
-    ManagedAgent,
-    ToolCallingAgent,
-    tool,
-)
+from smolagents import CodeAgent, HfApiModel, tool
 
-login()
+import get_site
 
 
 @tool
-def visit_webpage(url: str) -> str:
-    """Visits a webpage at the given URL and returns its content as a markdown string.
+def download_website(url: str) -> str:
+    """
+    This is a tool that returns the html of the site at the url.
 
     Args:
-        url: The URL of the webpage to visit.
+        url: The url of the website to download.
 
     Returns:
-        The content of the webpage converted to Markdown, or an error message if the request fails.
+        str: HTML from the url
     """
+    return get_site.get_html(url)
+
+
+@tool
+def url_exists(url: str) -> bool:
+    """
+    This is a tool to check if a URL exists by sending a HEAD request.
+
+    Args:
+        url: The URL to check.
+        timeout: Timeout in seconds for the request.
+
+    Returns:
+        bool: True if the URL exists, False otherwise.
+    """
+    timeout = 2
     try:
-        # Send a GET request to the URL
-        response = requests.get(url)
-        response.raise_for_status()  # Raise an exception for bad status codes
-
-        # Convert the HTML content to Markdown
-        markdown_content = markdownify(response.text).strip()
-
-        # Remove multiple line breaks
-        markdown_content = re.sub(r"\n{3,}", "\n\n", markdown_content)
-
-        return markdown_content
-
-    except RequestException as e:
-        return f"Error fetching the webpage: {str(e)}"
-    except Exception as e:
-        return f"An unexpected error occurred: {str(e)}"
+        response = requests.head(url, allow_redirects=True, timeout=timeout)
+        # Check if the HTTP status code indicates success (2xx or 3xx)
+        return response.status_code < 400
+    except requests.RequestException:
+        # Any exception (e.g., connection error, timeout) means the URL doesn't exist
+        return False
 
 
-model_id = "Qwen/Qwen2.5-Coder-32B-Instruct"
-model = HfApiModel(model_id)
+# url = "https://www.nature.com/cgt/"
+# url = "https://www.mdpi.com/journal/genes"
+# url = "https://www.science.org/journal/stm"
+# url = "https://www.cell.com/cell-systems/home"
+# url = "https://www.sciencedirect.com/journal/cell-reports"
+# model_id = "meta-llama/Llama-3.3-70B-Instruct"
+#
+# model = HfApiModel(model_id=model_id, token="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")
+# agent = CodeAgent(tools=[], model=model, add_base_tools=True)
+#
+# agent.run(
+#     "Could you give me the 118th number in the Fibonacci sequence?",
+# )
 
-web_agent = ToolCallingAgent(
-    tools=[DuckDuckGoSearchTool(), visit_webpage],
-    model=model,
-    max_steps=10,
+# model = LiteLLMModel(model_id="ollama_chat/llama3.2", api_key="ollama")
+# m = "describeai/gemini-small"
+# m = "meta-llama/Llama-3.3-70B-Instruct"
+# m = "microsoft/phi-4"
+
+
+def get_rss(url: str, model: str):
+    model = HfApiModel(model_id=model)
+    agent = CodeAgent(
+        tools=[download_website, url_exists],
+        model=model,
+        additional_authorized_imports=["bs4", "requests", "playwright", "urllib"],
+    )
+    o = agent.run(
+        f"Get the url of the rss url for the journal hosted at '{url}'. Only give me the rss url. Use download_website to get the html of the journal website. Use url_exists to test the rss url before giving it to me. Try looking at all urls provided in the html, and check to see if they mention rss."
+    )
+    # You might need to look in data-react-helmet elements.
+    # print("debug", o)
+    # print(dir(o))
+    # print(o.content)
+    return o.content
+
+
+@click.command()
+@click.argument("url")
+@click.option(
+    "--model",
+    "-m",
+    default="meta-llama/Llama-3.3-70B-Instruct",
+    help="Model to use for RSS detection. Default: meta-llama/Llama-3.3-70B-Instruct",
 )
+def main(url: str, model: str):
+    rss_url = get_rss(url, model)
+    print(rss_url)
 
-managed_web_agent = ManagedAgent(
-    agent=web_agent,
-    name="search",
-    description="Runs web searches for you. Give it your query as an argument.",
-)
 
-manager_agent = CodeAgent(
-    tools=[],
-    model=model,
-    managed_agents=[managed_web_agent],
-    additional_authorized_imports=["time", "numpy", "pandas"],
-)
-
-# answer = manager_agent.run("what is the rss url for the journal cancer gene therapy?")
-answer = manager_agent.run("what is the rss url for the journal cell systems?")
+if __name__ == "__main__":
+    main()
