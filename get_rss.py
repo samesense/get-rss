@@ -1,6 +1,6 @@
 import click
 import requests
-from smolagents import CodeAgent, HfApiModel, tool
+from smolagents import CodeAgent, HfApiModel, ManagedAgent, ToolCallingAgent, tool
 
 import get_site
 
@@ -63,14 +63,29 @@ def url_exists(url: str) -> bool:
 
 def get_rss(url: str, model: str):
     model = HfApiModel(model_id=model)
-    agent = CodeAgent(
-        tools=[download_website, url_exists],
+    web_agent = ToolCallingAgent(tools=[download_website], model=model, max_steps=2)
+    managed_web_agent = ManagedAgent(
+        agent=web_agent,
+        name="download_html",
+        description="Gets journal website html.",
+    )
+    validation_agent = ToolCallingAgent(tools=[url_exists], model=model, max_steps=2)
+    managed_validation_agent = ManagedAgent(
+        agent=validation_agent,
+        name="validate_rss",
+        description="Tells you if a url exists.",
+    )
+    manager_agent = CodeAgent(
+        tools=[managed_web_agent, managed_validation_agent],
         model=model,
         additional_authorized_imports=["bs4", "requests", "playwright", "urllib"],
     )
-    o = agent.run(
-        f"Get the url of the rss feed for the journal hosted at '{url}'. Only give me the rss url. Use download_website to get the html of the journal hosted at '{url}'. Use url_exists to test the rss url before giving it to me. If you get stuck, try looking at all urls provided in the journal html, and check to see if they mention rss. Some rss urls are presented relative to the base domain, so try adding the journal domain prefix when an rss url does not contain http or https. There is no need to visit the rss url. Do not give me a rss url that does not pass the url_exists check."
+    o = manager_agent.run(
+        f"Get the url of the rss feed for the journal hosted at '{url}'. Only give me the rss url. Test if the rss url before giving it to me. If you get stuck, try looking at all urls provided in the journal html, and check to see if they mention rss. Some rss urls are presented relative to the base domain, so try adding the journal domain prefix when an rss url does not contain http or https. There is no need to get the html of the rss url. Do not give me a rss url that does not pass the exists check."
     )
+    # o = manager_agent.run(
+    #     f"Get the url of the rss feed for the journal hosted at '{url}'. Only give me the rss url. Use download_website to get the html of the journal hosted at '{url}'. Use url_exists to test the rss url before giving it to me. If you get stuck, try looking at all urls provided in the journal html, and check to see if they mention rss. Some rss urls are presented relative to the base domain, so try adding the journal domain prefix when an rss url does not contain http or https. There is no need to visit the rss url. Do not give me a rss url that does not pass the url_exists check."
+    # )
     # You might need to look in data-react-helmet elements.
     # print("debug", o)
     # print(dir(o))
