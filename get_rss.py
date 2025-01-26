@@ -69,7 +69,7 @@ def get_rss(url: str, model: str):
         additional_authorized_imports=["bs4", "requests", "playwright", "urllib"],
     )
     o = agent.run(
-        f"Get the url of the rss feed for the journal hosted at '{url}'. Only give me the rss url. Use download_website to get the html of the journal hosted at '{url}'. Use url_exists to test the rss url before giving it to me. If you get stuck, try looking at all urls provided in the journal html, and check to see if they mention rss. Some rss urls are presented relative to the base domain, so try adding the journal domain prefix when an rss url does not contain http or https. There is no need to visit the rss url."
+        f"Get the url of the rss feed for the journal hosted at '{url}'. Only give me the rss url. Use download_website to get the html of the journal hosted at '{url}'. Use url_exists to test the rss url before giving it to me. If you get stuck, try looking at all urls provided in the journal html, and check to see if they mention rss. Some rss urls are presented relative to the base domain, so try adding the journal domain prefix when an rss url does not contain http or https. There is no need to visit the rss url. Do not give me a rss url that does not pass the url_exists check."
     )
     # You might need to look in data-react-helmet elements.
     # print("debug", o)
