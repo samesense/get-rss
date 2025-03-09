@@ -7,7 +7,10 @@ Here's a python script to find the RSS url on any journal website. It leverages 
 ### Usage
 
 ```
+# tool setup
 huggingface-cli login # auth and save hugging face token
+playwright install # browser automation
+
 python get_rss.py https://www.nature.com/cgt/
 # or
 python get_rss.py https://www.nature.com/cgt/ --model "meta-llama/Llama-3.3-70B-Instruct"
